@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SnapKitty-Opaque-1.0
+// Copyright Ahmad Ali Parr
+digraph sid {
+  rankdir=LR; bgcolor="white"; pad=0.3; nodesep=0.35; ranksep=0.45;
+  node [shape=box, style="rounded,filled", fillcolor="#eef3fb", color="#4a6fa5", fontname="Helvetica", fontsize=11];
+  edge [color="#555555", fontname="Helvetica", fontsize=9];
+  x [label="state x\n[B, S, d]", fillcolor="#fff4e0", color="#c98a1b"];
+  cls [label="CLS row x[:,0]\nα = softmax(x₀Vᵀ/τ)"];
+  qkv [label="Q, K, V\n(shared Linear)"];
+  paths [label="K paths\nK̃ = K·W_ind[k]\nsoftmax(QK̃ᵀ/√d_h)V\n→ W_O", fillcolor="#e7f5ea", color="#3d8b4f"];
+  gam [label="Γ = V̂V̂ᵀ\n(F.normalize)"];
+  inter [label="interference\nsequential, in place\nh_k += Σ Γ_kj h_j\nif |Γ_kj| > thr"];
+  coll [label="collapse\nLN(tanh(P Σ α_k h_k))"];
+  ref [label="refine: repeat while\n‖y−x‖/‖x‖ ≥ 1e-4\n(max 5)", shape=diamond, fillcolor="#fdeaea", color="#b04848"];
+  out [label="output_proj\n[B, S, d]", fillcolor="#fff4e0", color="#c98a1b"];
+  orth [label="orth loss\nΣ_{i≠j} Γ_ij²", shape=note, fillcolor="#f5f5f5", color="#888888"];
+  x -> cls; x -> qkv -> paths -> inter -> coll -> ref; cls -> coll;
+  gam -> inter; gam -> orth;
+  ref -> qkv [label="y becomes x", style=dashed];
+  ref -> out [label="done"];
+}

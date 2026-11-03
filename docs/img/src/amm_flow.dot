@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SnapKitty-Opaque-1.0
+// Copyright Ahmad Ali Parr
+digraph amm {
+  rankdir=LR; bgcolor="white"; pad=0.3; nodesep=0.3; ranksep=0.35;
+  node [shape=box, style="rounded,filled", fillcolor="#eef3fb", color="#4a6fa5", fontname="Helvetica", fontsize=10];
+  edge [color="#555555", fontname="Helvetica", fontsize=9];
+  img [label="image\n3×224×224", fillcolor="#fff4e0", color="#c98a1b"];
+  c1 [label="conv1 11/4/2\n96×55×55\nact + pool\n96×27×27"];
+  c2 [label="conv2 5/1/2\n256×27×27\nact + pool\n256×13×13"];
+  c345 [label="conv3-5 3/1/1\n384, 384, 256\nact + pool\n256×6×6"];
+  f6 [label="fc6\n9216→4096\nact", fillcolor="#e7f5ea", color="#3d8b4f"];
+  r6 [label="route6\nα = constrained_softmax\nΣ α_k (W_k x + b_k)", fillcolor="#fdeaea", color="#b04848"];
+  f7 [label="fc7\n4096→4096\nact", fillcolor="#e7f5ea", color="#3d8b4f"];
+  r7 [label="route7", fillcolor="#fdeaea", color="#b04848"];
+  f8 [label="fc8\n4096→1000", fillcolor="#fff4e0", color="#c98a1b"];
+  loss [label="CE + 0.1 (H̄ − 0.2)²\nwhen H̄ > 0.2", shape=note, fillcolor="#f5f5f5", color="#888888"];
+  img -> c1 -> c2 -> c345 -> f6 -> r6 -> f7 -> r7 -> f8 -> loss;
+  r6 -> loss [label="H̄₆", style=dashed];
+  r7 -> loss [label="H̄₇", style=dashed];
+}
