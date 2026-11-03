@@ -4,7 +4,6 @@
 [![CUDA 12](https://img.shields.io/badge/CUDA-12.x-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C.svg?logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/17)
 [![CMake 3.20+](https://img.shields.io/badge/CMake-3.20%2B-064F8C.svg?logo=cmake&logoColor=white)](CMakeLists.txt)
-[![CPU gradcheck: passing](https://img.shields.io/badge/CPU%20gradcheck-passing-brightgreen.svg)](#gradient-checks)
 [![GPU archs: sm_80 | sm_86 | sm_89 | sm_90](https://img.shields.io/badge/GPU%20archs-sm__80%20%7C%20sm__86%20%7C%20sm__89%20%7C%20sm__90-555555.svg)](Makefile)
 
 A CUDA C++ port of two PyTorch models: the Superpositioned Induction Daemon, which
@@ -26,14 +25,14 @@ The source describes the superposed weight as
 $$
 W_{\text{super}} = \sum_{k=1}^{K} \alpha_k \left(v_k v_k^{\top}\right) \otimes W^{\text{ind}}_k ,
 \qquad
-\alpha = \operatorname{softmax}\left(\frac{x_{\text{CLS}} V^{\top}}{\tau}\right)
+\alpha = \mathrm{softmax}\left(\frac{x_{\text{CLS}} V^{\top}}{\tau}\right)
 $$
 
 and what the code computes is one attention pass per path, with the keys bent by that
 path's induction matrix:
 
 $$
-h_k = W_O \cdot \operatorname{softmax}\left(\frac{Q \left(K W^{\text{ind}}_k\right)^{\top}}{\sqrt{d_h}}\right) V .
+h_k = W_O \cdot \mathrm{softmax}\left(\frac{Q \left(K W^{\text{ind}}_k\right)^{\top}}{\sqrt{d_h}}\right) V .
 $$
 
 Paths interfere through the normalized basis overlaps:
@@ -41,7 +40,7 @@ Paths interfere through the normalized basis overlaps:
 $$
 \Gamma_{ij} = \langle \hat v_i, \hat v_j \rangle, \qquad \hat v_i = \frac{v_i}{\max(\lVert v_i \rVert, 10^{-12})},
 \qquad
-h_k \leftarrow h_k + \sum_{j \ne k,\ |\Gamma_{kj}| > \theta} \Gamma_{kj}\, h_j ,
+h_k \leftarrow h_k + \sum_{j \ne k,\, \lvert\Gamma_{kj}\rvert > \theta} \Gamma_{kj}\, h_j ,
 $$
 
 applied for k = 1..K in order and in place, so later paths see the already-updated
@@ -54,7 +53,7 @@ $$
 and the paths collapse to one output
 
 $$
-y = \operatorname{LN}\left(\tanh\left(W_c \sum_k \alpha_k h_k + b_c\right)\right).
+y = \mathrm{LN}\left(\tanh\left(W_c \sum_k \alpha_k h_k + b_c\right)\right).
 $$
 
 The block is applied again to its own output until
@@ -68,7 +67,7 @@ then goes through a final linear layer.
 The five AlexNet convolutions and three fully connected layers are kept. Each ReLU becomes
 
 $$
-f(x) = a x + \frac{1-a}{b}\left(\operatorname{softplus}(b x) - \ln 2\right), \qquad f'(x) \in (a, 1),
+f(x) = a x + \frac{1-a}{b}\left(\mathrm{softplus}(b x) - \ln 2\right), \qquad f'(x) \in (a, 1),
 $$
 
 with a = 0.01 and b = 1. After fc6 and fc7, a router mixes K = 4 linear maps,
@@ -77,7 +76,7 @@ lowered by bisection, for rows whose entropy is over 0.2, until the entropy meet
 Training is SGD (momentum 0.9, weight decay 5e-4) on
 
 $$
-\mathcal{L} = \operatorname{CE}(\text{logits}, y) + \sum_{\ell \in \{6, 7\}} 0.1\,(\bar H_\ell - 0.2)^2\,[\bar H_\ell > 0.2].
+\mathcal{L} = \mathrm{CE}(\text{logits}, y) + \sum_{\ell \in \lbrace 6, 7 \rbrace} 0.1\,(\bar H_\ell - 0.2)^2\,[\bar H_\ell > 0.2].
 $$
 
 <p>
@@ -155,7 +154,7 @@ references with finite differences, in double, for every parameter tensor and th
 tensor passes when its max relative error is at most 1e-5, or every element's absolute error
 is under 1e-8 (superposition) or 1e-9 (AlexNet-MMEP). The relative error is taken per
 element, so it gets large on elements whose true gradient is close to zero. That is why some
-AlexNet-MMEP rows are above 1e-5 while their absolute error is around 1e-11. All tensors pass.
+AlexNet-MMEP rows are above 1e-5 while their absolute error is around 1e-11. Every tensor meets that test.
 
 Superposition, worst over three configs (3 passes with 2 of 12 pairs interfering, an early
 stop after 2 passes with 4 of 6 pairs interfering, and a single path):
